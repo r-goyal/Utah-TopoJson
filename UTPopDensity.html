@@ -29,11 +29,24 @@ svg {
 <head>
     <h1 style="text-align:center; color:#081d58"><bold>Utah Population Density</bold></h1>
 </head>
-<body>
+<body>    
+     <!--Toggle color button-->
+    <input class="color" type="button" name="color_change" value="Toggle Color">
+    
+    <!--Toggle show boundaries button-->
+    <input class="boundary" type="button" name="boundary_change" value="Toggle Boundary">
+    
+    <input class="tract" type="button" name="tract_change" value="Toggle Tract">
+    
 <script src="//d3js.org/d3.v3.min.js"></script>
 <script src="//d3js.org/topojson.v1.min.js"></script>
 <script>
 
+var changeColor = false;
+var showBoundary = true;
+var showTract = true; 
+    
+    
 var width = 960,
     height = 1100;
 
@@ -44,8 +57,39 @@ var path = d3.geo.path()
     
 var color = d3.scale.threshold()
     .domain([1, 10, 50, 100, 500, 1000, 2000, 5000])
-    .range(["#fcfbfd", "#efedf5", "#dadaeb", "#bcbddc", "#9e9ac8", "#807dba", "#6a51a3", "#54278f", "#3f007d"]);
+    .range(["#fff7ec", "#fee8c8", "#fdd49e", "#fdbb84", "#fc8d59", "#ef6548", "#d7301f", "#b30000", "#7f0000"]); 
 
+ d3.select("input.color").on("click", toggleColor);
+    d3.select("input.boundary").on("click", toggleBoundary);
+    d3.select("input.tract").on("click", toggleTract);
+    
+function toggleColor() {
+  
+    changeColor = !changeColor;
+      
+    if(changeColor){  
+    color = d3.scale.threshold()
+    .domain([1, 10, 50, 100, 500, 1000, 2000, 5000])
+    .range(["#fcfbfd", "#efedf5", "#dadaeb", "#bcbddc", "#9e9ac8", "#807dba", "#6a51a3", "#54278f", "#3f007d"]);
+    }
+      else {
+    color = d3.scale.threshold()
+    .domain([1, 10, 50, 100, 500, 1000, 2000, 5000])
+    .range(["#fff7ec", "#fee8c8", "#fdd49e", "#fdbb84", "#fc8d59", "#ef6548", "#d7301f", "#b30000", "#7f0000"]); 
+      }
+  refresh(); //refresh map    
+  }
+    
+function toggleBoundary(){
+    showBoundary = !showBoundary;
+    refresh(); //refresh map
+}
+    
+function toggleTract(){
+    showTract = !showTract;
+    refresh(); //refresh map
+    }
+    
 // A position encoding for the key only.
 var x = d3.scale.linear()
     .domain([0, 5100])
@@ -61,11 +105,14 @@ var xAxis = d3.svg.axis()
 var svg = d3.select("body").append("svg")
     .attr("width", width)
     .attr("height", height);
+refresh();
+    
 
-var g = svg.append("g")
+function refresh(){
+    var g = svg.append("g")
     .attr("class", "key")
     .attr("transform", "translate(440,40)");
-
+    
 g.selectAll("rect")
     .data(color.range().map(function(d, i) {
       return {
@@ -84,17 +131,7 @@ g.call(xAxis).append("text")
     .attr("class", "caption")
     .attr("y", -6)
     .text("Population per square mile");
-
-g.call(xAxis).append("text")
-    .attr("class", "colorButton")
-    .attr("y", 50)
-    .text("Different Color")
-    .on("click", function()
-        {color.range(["#fff7ec", "#fee8c8", "#fdd49e", "#fdbb84", "#fc8d59", "#ef6548", "#d7301f", "#b30000", "#7f0000"]);
-        d3.selectAll("path").data.style("fill",function(d){return d.key})
-                           });
     
-
 d3.json("ut.json", function(error, ut) {
   if (error) throw error;
 
@@ -120,17 +157,29 @@ d3.json("ut.json", function(error, ut) {
       .attr("d", function(d) { return path({type: "FeatureCollection", features: d.values}); });
 
   // Draw county borders.
-  svg.append("path")
+if(showBoundary){
+    svg.append("path")
       .datum(topojson.mesh(ut, ut.objects["UT-County"], function(a, b) { return a !== b; }))
       .attr("class", "county-border")
       .attr("d", path);
+}
+    
+if(showTract){
+    svg.append("path")
+      .datum(topojson.mesh(ut, ut.objects["cb_2015_49_tract_500k"], function(a, b) { return a !== b; }))
+      .attr("class", "county-border")
+      .attr("d", path);
+}
 });
+}
 
 d3.select(self.frameElement).style("height", height + "px");
-
-
 </script>
-<p><text>Richa Goyal</text></p>
-<p><text>Instructor: Suresh Lodha</text></p>
-<p><text>CMPS165: Data programming for Visualization</text></p>
-<p><text>Fall 2016</text></p>
+    
+<h3>Richa Goyal<br/>
+Instructor: Suresh Lodha <br/>
+CMPS165: Data Programming For Visualization <br/>
+Fall 2016 <br/> 
+<a href="http://127.0.0.1:58390/UtahMapping/UTPopDensity.html">To Visualization</a> <br/>
+<a href="https://github.com/r-goyal/UtahPopulation">To Github</a>     
+</h3> 
