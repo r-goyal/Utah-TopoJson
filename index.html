@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+svg {
+  font: 10px sans-serif;
+}
+
+.caption {
+  font-weight: bold;
+}
+
+.key path {
+  display: none;
+}
+
+.key line {
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+
+.county-border {
+  fill: none;
+  stroke: #000;
+  stroke-opacity: .3;
+}
+
+</style>
+<head>
+    <h1 style="text-align:center; color:#081d58"><bold>Utah Population Density</bold></h1>
+</head>
+<body>    
+     <!--Toggle color button-->
+    <input class="color" type="button" name="color_change" value="Toggle Color">
+    
+    <!--Toggle show boundaries button-->
+    <input class="boundary" type="button" name="boundary_change" value="Toggle Boundary">
+    
+    <input class="tract" type="button" name="tract_change" value="Toggle Tract">
+    
+<script src="//d3js.org/d3.v3.min.js"></script>
+<script src="//d3js.org/topojson.v1.min.js"></script>
+<script>
+
+var changeColor = false;
+var showBoundary = true;
+var showTract = true; 
+    
+    
+var width = 960,
+    height = 1100;
+
+var formatNumber = d3.format(",d");
+
+var path = d3.geo.path()
+    .projection(null);
+    
+var color = d3.scale.threshold()
+    .domain([1, 10, 50, 100, 500, 1000, 2000, 5000])
+    .range(["#fff7ec", "#fee8c8", "#fdd49e", "#fdbb84", "#fc8d59", "#ef6548", "#d7301f", "#b30000", "#7f0000"]); 
+
+ d3.select("input.color").on("click", toggleColor);
+    d3.select("input.boundary").on("click", toggleBoundary);
+    d3.select("input.tract").on("click", toggleTract);
+    
+function toggleColor() {
+  
+    changeColor = !changeColor;
+      
+    if(changeColor){  
+    color = d3.scale.threshold()
+    .domain([1, 10, 50, 100, 500, 1000, 2000, 5000])
+    .range(["#fcfbfd", "#efedf5", "#dadaeb", "#bcbddc", "#9e9ac8", "#807dba", "#6a51a3", "#54278f", "#3f007d"]);
+    }
+      else {
+    color = d3.scale.threshold()
+    .domain([1, 10, 50, 100, 500, 1000, 2000, 5000])
+    .range(["#fff7ec", "#fee8c8", "#fdd49e", "#fdbb84", "#fc8d59", "#ef6548", "#d7301f", "#b30000", "#7f0000"]); 
+      }
+  refresh(); //refresh map    
+  }
+    
+function toggleBoundary(){
+    showBoundary = !showBoundary;
+    refresh(); //refresh map
+}
+    
+function toggleTract(){
+    showTract = !showTract;
+    refresh(); //refresh map
+    }
+    
+// A position encoding for the key only.
+var x = d3.scale.linear()
+    .domain([0, 5100])
+    .range([0, 480]);
+
+var xAxis = d3.svg.axis()
+    .scale(x)
+    .orient("bottom")
+    .tickSize(13)
+    .tickValues(color.domain())
+    .tickFormat(function(d) { return d >= 100 ? formatNumber(d) : null; });
+
+var svg = d3.select("body").append("svg")
+    .attr("width", width)
+    .attr("height", height);
+refresh();
+    
+
+function refresh(){
+    var g = svg.append("g")
+    .attr("class", "key")
+    .attr("transform", "translate(440,40)");
+    
+g.selectAll("rect")
+    .data(color.range().map(function(d, i) {
+      return {
+        x0: i ? x(color.domain()[i - 1]) : x.range()[0],
+        x1: i < color.domain().length ? x(color.domain()[i]) : x.range()[1],
+        z: d
+      };
+    }))
+  .enter().append("rect")
+    .attr("height", 8)
+    .attr("x", function(d) { return d.x0; })
+    .attr("width", function(d) { return d.x1 - d.x0; })
+    .style("fill", function(d) { return d.z; });
+
+g.call(xAxis).append("text")
+    .attr("class", "caption")
+    .attr("y", -6)
+    .text("Population per square mile");
+    
+d3.json("ut.json", function(error, ut) {
+  if (error) throw error;
+
+  var tracts = topojson.feature(ut, ut.objects["cb_2015_49_tract_500k"]);
+
+  // Clip tracts to land.
+  svg.append("defs").append("clipPath")
+      .attr("id", "clip-land")
+    .append("path")
+      .datum(topojson.feature(ut, ut.objects["UT-County"]))
+      .attr("d", path);
+
+  // Group tracts by color for faster rendering.
+  svg.append("g")
+      .attr("class", "tract")
+      .attr("clip-path", "url(#clip-land)")
+    .selectAll("path")
+      .data(d3.nest()
+        .key(function(d) { return color(d.properties.population / d.properties.area * 2.58999e6); })
+        .entries(tracts.features.filter(function(d) { return d.properties.area; })))
+    .enter().append("path")
+      .style("fill", function(d) { return d.key; })
+      .attr("d", function(d) { return path({type: "FeatureCollection", features: d.values}); });
+
+  // Draw county borders.
+if(showBoundary){
+    svg.append("path")
+      .datum(topojson.mesh(ut, ut.objects["UT-County"], function(a, b) { return a !== b; }))
+      .attr("class", "county-border")
+      .attr("d", path);
+}
+    
+if(showTract){
+    svg.append("path")
+      .datum(topojson.mesh(ut, ut.objects["cb_2015_49_tract_500k"], function(a, b) { return a !== b; }))
+      .attr("class", "county-border")
+      .attr("d", path);
+}
+});
+}
+
+d3.select(self.frameElement).style("height", height + "px");
+</script>
+    
+<h3>Richa Goyal<br/>
+Instructor: Suresh Lodha <br/>
+CMPS165: Data Programming For Visualization <br/>
+Fall 2016 <br/> 
+<a href="http://127.0.0.1:58390/UtahMapping/UTPopDensity.html">To Visualization</a> <br/>
+<a href="https://github.com/r-goyal/UtahPopulation">To Github</a>     
+</h3> 
